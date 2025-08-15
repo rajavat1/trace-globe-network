@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from "@/components/ui/card";
@@ -27,6 +27,7 @@ interface NetworkMapProps {
 const NetworkMap = ({ hops, isTracing, targetHost }: NetworkMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const [isStyleLoaded, setIsStyleLoaded] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -54,11 +55,16 @@ const NetworkMap = ({ hops, isTracing, targetHost }: NetworkMapProps) => {
 
     // Add atmosphere and fog effects
     map.current.on('style.load', () => {
-      map.current?.setFog({
+      if (!map.current) return;
+      
+      map.current.setFog({
         color: 'rgb(30, 30, 40)',
         'high-color': 'rgb(50, 50, 70)',
         'horizon-blend': 0.3,
       });
+      
+      // Mark style as loaded
+      setIsStyleLoaded(true);
     });
 
     // Globe rotation animation
@@ -99,13 +105,19 @@ const NetworkMap = ({ hops, isTracing, targetHost }: NetworkMapProps) => {
     spinGlobe();
 
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      setIsStyleLoaded(false);
     };
   }, []);
 
-  // Add markers and routes when hops change
+  // Add markers and routes when hops change AND style is loaded
   useEffect(() => {
-    if (!map.current || hops.length === 0) return;
+    if (!map.current || !isStyleLoaded || hops.length === 0) return;
+
+    console.log('Adding sources to map, style loaded:', isStyleLoaded, 'hops:', hops.length);
 
     // Clear existing layers and sources
     const existingLayers = ['route-line', 'hop-points', 'hop-labels'];
@@ -222,7 +234,7 @@ const NetworkMap = ({ hops, isTracing, targetHost }: NetworkMapProps) => {
       map.current.fitBounds(bounds, { padding: 50 });
     }
 
-  }, [hops]);
+  }, [hops, isStyleLoaded]);
 
   return (
     <Card className="h-full border-glow bg-card/80 backdrop-blur-sm overflow-hidden">
