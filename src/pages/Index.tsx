@@ -4,42 +4,19 @@ import NetworkGlobe from "@/components/NetworkGlobe";
 import HopsList from "@/components/HopsList";
 import { useToast } from "@/hooks/use-toast";
 
-// Demo data for visualization (will be replaced with real backend)
-const demoHops = [
-  {
-    id: 1,
-    ip: "192.168.1.1",
-    hostname: "gateway.local",
-    latency: 2,
-    location: { lat: 37.7749, lng: -122.4194, city: "San Francisco", country: "USA" }
-  },
-  {
-    id: 2,
-    ip: "10.0.0.1",
-    hostname: "isp.provider.com",
-    latency: 15,
-    location: { lat: 40.7128, lng: -74.0060, city: "New York", country: "USA" }
-  },
-  {
-    id: 3,
-    ip: "8.8.8.8",
-    hostname: "dns.google",
-    latency: 25,
-    location: { lat: 51.5074, lng: -0.1278, city: "London", country: "UK" }
-  }
-];
+// Interface for location data
+interface Location {
+  lat: number;
+  lng: number;
+  city: string;
+  country: string;
+}
 
 interface Hop {
-  id: number;
   ip: string;
-  hostname?: string;
+  hostname: string;
   latency: number;
-  location: {
-    lat: number;
-    lng: number;
-    city?: string;
-    country?: string;
-  };
+  location?: Location;
 }
 
 const Index = () => {
@@ -58,18 +35,36 @@ const Index = () => {
       description: `Tracing route to ${target}`,
     });
 
-    // Simulate traceroute with demo data
-    // In production, this would call a backend API
-    for (let i = 0; i < demoHops.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setHops(prev => [...prev, demoHops[i]]);
-    }
+    try {
+      const response = await fetch('https://legendary-acorn-g44vx76wwvg6hv7q7-3001.app.github.dev/api/traceroute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ target }),
+      });
 
-    setIsTracing(false);
-    toast({
-      title: "Traceroute Complete",
-      description: `Found ${demoHops.length} hops to ${target}`,
-    });
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const data = await response.json();
+      setHops(data.hops);
+
+      toast({
+        title: "Traceroute Complete",
+        description: `Found ${data.hops.length} hops to ${target}`,
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to complete traceroute. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTracing(false);
+    }
   };
 
   return (

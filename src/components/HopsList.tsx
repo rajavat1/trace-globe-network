@@ -3,17 +3,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { MapPin, Clock, Server, Globe } from "lucide-react";
 
+interface Location {
+  lat: number;
+  lng: number;
+  city: string;
+  country: string;
+}
+
 interface Hop {
-  id: number;
   ip: string;
-  hostname?: string;
+  hostname: string;
   latency: number;
-  location: {
-    lat: number;
-    lng: number;
-    city?: string;
-    country?: string;
-  };
+  location?: Location;
 }
 
 interface HopsListProps {
@@ -54,7 +55,7 @@ const HopsList = ({ hops, isTracing, currentHop }: HopsListProps) => {
         
         {hops.map((hop, index) => (
           <div
-            key={hop.id}
+            key={hop.ip}
             className={`p-3 border rounded-lg transition-all duration-300 ${
               index === currentHop 
                 ? 'border-accent bg-accent/10 animate-pulse-glow' 
@@ -64,7 +65,7 @@ const HopsList = ({ hops, isTracing, currentHop }: HopsListProps) => {
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs px-2 py-1">
-                  #{hop.id}
+                  #{index + 1}
                 </Badge>
                 <span className="font-mono text-sm font-medium text-primary">
                   {hop.ip}
@@ -85,7 +86,7 @@ const HopsList = ({ hops, isTracing, currentHop }: HopsListProps) => {
               </div>
             )}
             
-            {hop.location.city && (
+            {hop.location?.city && (
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="w-3 h-3 text-accent" />
                 <span className="text-xs text-foreground">

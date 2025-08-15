@@ -4,17 +4,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Activity } from "lucide-react";
 
+interface Location {
+  lat: number;
+  lng: number;
+  city: string;
+  country: string;
+}
+
 interface Hop {
-  id: number;
   ip: string;
-  hostname?: string;
+  hostname: string;
   latency: number;
-  location: {
-    lat: number;
-    lng: number;
-    city?: string;
-    country?: string;
-  };
+  location?: Location;
 }
 
 interface NetworkGlobeProps {
