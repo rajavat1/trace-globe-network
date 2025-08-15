@@ -1,6 +1,6 @@
 import { useState } from "react";
 import TracerouteInput from "@/components/TracerouteInput";
-import NetworkMap from "@/components/NetworkMap";
+import NetworkGlobe from "@/components/NetworkGlobe";
 import HopsList from "@/components/HopsList";
 import { useToast } from "@/hooks/use-toast";
 
@@ -92,9 +92,9 @@ const Index = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
-          {/* Map - Takes 2 columns on large screens */}
+          {/* Globe - Takes 2 columns on large screens */}
           <div className="lg:col-span-2">
-            <NetworkMap 
+            <NetworkGlobe 
               hops={hops} 
               isTracing={isTracing} 
               targetHost={targetHost}
