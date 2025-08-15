@@ -208,6 +208,9 @@ const NetworkGlobe = ({ hops, isTracing, targetHost }: NetworkGlobeProps) => {
 
     // Add hop markers
     hops.forEach((hop, index) => {
+      // Skip hops without location data
+      if (!hop.location) return;
+      
       const position = latLngToVector3(hop.location.lat, hop.location.lng);
       
       // Create hop marker
@@ -227,7 +230,7 @@ const NetworkGlobe = ({ hops, isTracing, targetHost }: NetworkGlobeProps) => {
       hopMarkersRef.current?.add(marker);
 
       // Create route line to next hop
-      if (index < hops.length - 1) {
+      if (index < hops.length - 1 && hops[index + 1].location) {
         const nextPosition = latLngToVector3(hops[index + 1].location.lat, hops[index + 1].location.lng);
         
         // Create curved line between points
