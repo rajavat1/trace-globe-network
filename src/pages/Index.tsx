@@ -3,6 +3,7 @@ import TracerouteInput from "@/components/TracerouteInput";
 import NetworkGlobe from "@/components/NetworkGlobe";
 import HopsList from "@/components/HopsList";
 import { useToast } from "@/hooks/use-toast";
+import { useSocket } from "@/hooks/useSocket";
 
 // Interface for location data
 interface Location {
@@ -23,48 +24,102 @@ const Index = () => {
   const [hops, setHops] = useState<Hop[]>([]);
   const [isTracing, setIsTracing] = useState(false);
   const [targetHost, setTargetHost] = useState<string>("");
+  const [currentHop, setCurrentHop] = useState<number>(0);
   const { toast } = useToast();
 
+  // Socket.IO event handlers
+  const handleHopDiscovered = (hopData: Hop & { hopNumber: number }) => {
+    console.log('Hop discovered:', hopData);
+    setHops(prev => {
+      const newHops = [...prev];
+      const existingIndex = newHops.findIndex(h => h.ip === hopData.ip);
+      
+      if (existingIndex >= 0) {
+        newHops[existingIndex] = hopData;
+      } else {
+        newHops.push(hopData);
+      }
+      
+      return newHops.sort((a: any, b: any) => (a.hopNumber || 0) - (b.hopNumber || 0));
+    });
+    setCurrentHop(hopData.hopNumber);
+  };
+
+  const handleHopLocationUpdated = (hopData: Hop & { hopNumber: number }) => {
+    console.log('Hop location updated:', hopData);
+    setHops(prev => {
+      const newHops = [...prev];
+      const existingIndex = newHops.findIndex(h => h.ip === hopData.ip);
+      
+      if (existingIndex >= 0) {
+        newHops[existingIndex] = hopData;
+      }
+      
+      return newHops;
+    });
+
+    toast({
+      title: "Location Found",
+      description: `${hopData.location?.city}, ${hopData.location?.country}`,
+    });
+  };
+
+  const handleTracerouteStarted = (data: { target: string }) => {
+    console.log('Traceroute started:', data);
+  };
+
+  const handleTracerouteCompleted = (data: { hopCount: number }) => {
+    console.log('Traceroute completed:', data);
+    setIsTracing(false);
+    setCurrentHop(0);
+    
+    toast({
+      title: "Traceroute Complete",
+      description: `Found ${data.hopCount} hops to ${targetHost}`,
+    });
+  };
+
+  const handleTracerouteError = (data: { error: string }) => {
+    console.error('Traceroute error:', data);
+    setIsTracing(false);
+    setCurrentHop(0);
+    
+    toast({
+      title: "Error",
+      description: `Traceroute failed: ${data.error}`,
+      variant: "destructive",
+    });
+  };
+
+  const { startTraceroute, isConnected } = useSocket({
+    onHopDiscovered: handleHopDiscovered,
+    onHopLocationUpdated: handleHopLocationUpdated,
+    onTracerouteStarted: handleTracerouteStarted,
+    onTracerouteCompleted: handleTracerouteCompleted,
+    onTracerouteError: handleTracerouteError,
+  });
+
   const handleStartTrace = async (target: string) => {
+    if (!isConnected) {
+      toast({
+        title: "Connection Error",
+        description: "Not connected to server. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setTargetHost(target);
     setIsTracing(true);
     setHops([]);
+    setCurrentHop(0);
 
     toast({
       title: "Traceroute Started",
-      description: `Tracing route to ${target}`,
+      description: `Starting real-time trace to ${target}`,
     });
 
-    try {
-      const response = await fetch('https://legendary-acorn-g44vx76wwvg6hv7q7-3001.app.github.dev/api/traceroute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ target }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      setHops(data.hops);
-
-      toast({
-        title: "Traceroute Complete",
-        description: `Found ${data.hops.length} hops to ${target}`,
-      });
-    } catch (error) {
-      console.error('Error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to complete traceroute. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTracing(false);
-    }
+    startTraceroute(target);
   };
 
   return (
@@ -101,7 +156,7 @@ const Index = () => {
             <HopsList 
               hops={hops} 
               isTracing={isTracing}
-              currentHop={isTracing ? hops.length : undefined}
+              currentHop={currentHop}
             />
           </div>
         </div>
@@ -110,7 +165,10 @@ const Index = () => {
         <div className="text-center text-sm text-muted-foreground">
           <p>Real-time network traceroute with geographical visualization</p>
           <p className="mt-1">
-            Currently showing demo data - connect to backend for live traceroute functionality
+            {isConnected ? 
+              "🟢 Connected - Real-time traceroute ready" : 
+              "🔴 Disconnected - Please refresh the page"
+            }
           </p>
         </div>
       </div>
